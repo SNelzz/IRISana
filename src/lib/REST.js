@@ -102,252 +102,234 @@ class REST {
                     OLAP.getFacts(this.connection).then(result => {
                         this.success(result);
                     }).catch(e => {
-                        const message = e.toString();
-        
-                        // Try and extract the error message
-                        const match = message.match(/ERROR: (.*?)$/);
-                        if (match && typeof match[1] == "string") {
-                            this.error(match[1]);
-                        } else {
-                            this.error((e.stack || e).toString(), query);
-                        }
+                        this.error((e.stack || e).toString(), query);
                     });
                     
                 } else if(url == "/facts/{fact}/measures") {                    
                     OLAP.getMeasuresByFact(this.connection, fact).then(result => {
                         this.success(result);
                     }).catch(e => {
-                        const message = e.toString();
-
-                        // Try and extract the error message
-                        const match = message.match(/ERROR: (.*?)$/);
-                        if (match && typeof match[1] == "string") {
-                            this.error(match[1]);
-                        } else {
-                            this.error((e.stack || e).toString(), query);
-                        }
+                        this.error((e.stack || e).toString(), query);
                     });
+
                 } else if(url == "/facts/{fact}/dimensions") {
                     OLAP.getDimensionsByFact(this.connection, fact).then(result => {
                         this.success(result);
                     }).catch(e => {
-                        const message = e.toString();
-        
-                        // Try and extract the error message
-                        const match = message.match(/ERROR: (.*?)$/);
-                        if (match && typeof match[1] == "string") {
-                            this.error(match[1]);
-                        } else {
-                            this.error((e.stack || e).toString(), query);
-                        }
+                        this.error((e.stack || e).toString(), query);
                     });
+
                 } else if(url == "/facts/{fact}/dimensions/{dimension}/hierarchies") {
                     OLAP.getHierarchiesByDimension(this.connection, dimension).then(result => {
                         this.success(result);
                     }).catch(e => {
-                        const message = e.toString();
-        
-                        // Try and extract the error message
-                        const match = message.match(/ERROR: (.*?)$/);
-                        if (match && typeof match[1] == "string") {
-                            this.error(match[1]);
-                        } else {
-                            this.error((e.stack || e).toString(), query);
-                        }
+                    this.error((e.stack || e).toString(), query);
                     });
+
                 } else if(url == "/facts/{fact}/dimensions/{dimension}/hierarchies/{hierarchy}/members") {
                     OLAP.getMembers(this.connection, dimension, hierarchy).then(result => {
                         this.success(result);
                     }).catch(e => {
-                        const message = e.toString();
-        
-                        // Try and extract the error message
-                        const match = message.match(/ERROR: (.*?)$/);
-                        if (match && typeof match[1] == "string") {
-                            this.error(match[1]);
-                        } else {
-                            this.error((e.stack || e).toString(), query);
-                        }
+                        this.error((e.stack || e).toString(), query);
                     });
                 }
 
             } else if (url.includes("graph")) {
 
+                // Extract the URL parameters
                 const fact = params["fact"].replace(/-/g, " ");
                 const columns = params["columns"].replace(/-/g, " ").split(",");
                 const rows = params["rows"].replace(/-/g, " ").split(",");
-                let filter = [];
-                let query = "";
-                let columnQuery = "";
-                let rowQuery = "";
-                let filterQuery = "";
+                let filter = [];               
                 if(params["filter"] != null) {
                    filter = params["filter"].replace(/-/g, " ").split(",");
                 }
 
-                // fill columnQuery string
-                if(columns.length == 1) {
-                    columnQuery = "select {[Measures].[" + columns[0] + "]} on columns, ";
+                // Create a string to select the requested columns
+                const createSelectColumns = function() {  
+                    let columnQuery = "";             
+                    if(columns.length == 1) {
+                        columnQuery = "select {[Measures].[" + columns[0] + "]} on columns, ";
 
-                } else if (columns.length == 2) {
-                    columnQuery = "select {[Measures].[" + columns[0] + "], [Measures].[" + columns[1] + "]} on columns, ";
-                } else {
-                    this.error("Either 1 or 2 columns must be given");
+                    } else if (columns.length == 2) {
+                        columnQuery = "select {[Measures].[" + columns[0] + "], [Measures].[" + columns[1] + "]} on columns, ";
+                    } else {
+                        this.error("Either 1 or 2 columns must be given");
+                    }
+                    return columnQuery;
                 }
 
-                // fill rowQuery string
-                let filtSplit = {};
-                let filtHierarchy = [];
-                let leng = filter.length;
-                for(let n = 0; n < leng; n++) {
-                    filtSplit[n] = filter[n].split(".");
-                    filtHierarchy[n] = filtSplit[n][0] + "." + filtSplit[n][1];
-                }
+                // Create a string to select the requested rows. Filter the rows if included in the filter parameter.
+                const createSelectRows = function(){
+                    let filt = {};
+                    let filterHierarchy = [];
+                    let len = filter.length;
+                    let rowQuery = "";
+                    for(let n = 0; n < len; n++) {
+                        filt[n] = filter[n].split(".");
+                        filterHierarchy[n] = filt[n][0] + "." + filt[n][1];
+                    }
 
-                if(rows.length == 1) {
-                    const row = rows[0].split(".");
-                    if(filtHierarchy.includes(rows[0])) {
-                        rowQuery = "{";
-                        let a = 0;
-                        let toSplice = [];
-                        for(let p = 0; p < leng; p++) {
-                            if(filtSplit[p][0] == row[0] && filtSplit[p][1] == row[1]) {
-                                if(a > 0) {
-                                    rowQuery += ",";
+                    if(rows.length == 1) {
+                        const row = rows[0].split(".");
+                        // Check if row needs to be filtered
+                        if(filterHierarchy.includes(rows[0])) {
+                            rowQuery = "{";
+                            let a = 0;
+                            let toSplice = [];
+                            for(let p = 0; p < len; p++) {
+                                // Create select string for filtered row 
+                                if(filt[p][0] == row[0] && filt[p][1] == row[1]) {
+                                    if(a > 0) {
+                                        rowQuery += ",";
+                                    }
+                                    rowQuery += "[" + row[0] + "].[" + row[1] + "].[" + filt[p][2] + "]";
+                                    toSplice.push(p);
+                                    a++;
                                 }
-                                rowQuery += "[" + row[0] + "].[" + row[1] + "].[" + filtSplit[p][2] + "]";
-                                toSplice.push(p);
-                                a++;
                             }
+                            // Delete all filtered rows out of list of items to be filtered. Going backwards through the array to prevent the index from changing before being deleted.
+                            for(let q = toSplice.length -1; q >=0; q--) {
+                                filter.splice(toSplice[q],1);
+                            }
+                            rowQuery += "} on rows ";
+                        } else {
+                            rowQuery = "{[" + row[0] + "].[" + row[1] + "].children} on rows ";
+                        }                    
+                    } else if(rows.length == 2) {
+                        const row = rows[0].split(".");
+                        const row1 = rows[1].split(".");
+                        let toSplice = [];
+
+                        // Check if the first row needs to be filtered
+                        if(filterHierarchy.includes(rows[0])) {
+                            rowQuery += "{";
+                            let a = 0;                        
+                            for(let p = 0; p < len; p++) {
+                                // Create select string for filtered row with a set
+                                if(filt[p][0] == row[0] && filt[p][1] == row[1]) {
+                                    if(a > 0) {
+                                        rowQuery += ",";
+                                    }
+                                    rowQuery += "[" + row[0] + "].[" + row[1] + "].[" + filt[p][2] + "]";
+                                    toSplice.push(p);
+                                    a++;
+                                }
+                            }
+                            // Check if the second row needs to be filtered. If not then complete the row query string without a set
+                            if(!filterHierarchy.includes(rows[1])) {
+                                rowQuery += "}*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
+                            }
+                            
                         }
+                        // Check if the second row needs to be filtered
+                        if(filterHierarchy.includes(rows[1])) {
+                            // Check if the first row needs to be filtered. If not then include the first row query string without a set
+                            if(!filterHierarchy.includes(rows[0])) {
+                                rowQuery += "[" + row[0] + "].[" + row[1] + "].children*";
+                            }
+                            rowQuery += "{";
+                            let a = 0;                        
+                            for(let r = 0; r < len; r++) {
+                                // Create select string for filtered row with a set
+                                if(filt[r][0] == row1[0] && filt[r][1] == row1[1]) {
+                                    if(a > 0) {
+                                        rowQuery += ",";
+                                    }
+                                    rowQuery += "[" + row1[0] + "].[" + row1[1] + "].[" + filt[r][2] + "]";
+                                    toSplice.push(r);
+                                    a++;
+                                }
+                            }
+                            rowQuery += "} on rows ";
+                        }
+                        // Delete all filtered rows from the list of items to be filtered. Going backwards through the array to prevent the index from changing before being deleted.
                         for(let q = toSplice.length -1; q >=0; q--) {
                             filter.splice(toSplice[q],1);
                         }
-                        rowQuery += "} on rows ";
+                        // Check if either row needs to be filtered. If not then create the row query string without sets.
+                        if(!(filterHierarchy.includes(rows[0]) || filterHierarchy.includes(rows[1]))) {
+                            rowQuery = "[" + row[0] + "].[" + row[1] + "].children*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
+                        }                    
                     } else {
-                        rowQuery = "{[" + row[0] + "].[" + row[1] + "].children} on rows ";
-                    }                    
-                } else if(rows.length == 2) {
-                    const row = rows[0].split(".");
-                    const row1 = rows[1].split(".");
-                    let toSplice = [];
-                    if(filtHierarchy.includes(rows[0])) {
-                        rowQuery += "{";
-                        let a = 0;                        
-                        for(let p = 0; p < leng; p++) {
-                            if(filtSplit[p][0] == row[0] && filtSplit[p][1] == row[1]) {
-                                if(a > 0) {
-                                    rowQuery += ",";
+                        this.error("Either 1 or 2 rows must be given");
+                    }
+                    return rowQuery;
+                }
+
+                const createWhere = function() {
+                    let filterQuery = "";
+                    if(filter.length > 0) {
+                        
+                        let checkHierarchy = [];
+                        let alreadySeen = [];
+                        let duplicateHierarchy = [];
+                        let len = filter.length;
+                        let filt = {};
+
+                        // Check for returning hierarchies and save duplicates to an array
+                        for(let j = 0; j < len; j++) {
+                            filt[j] = filter[j].split(".");
+                            checkHierarchy[j] = filt[j][0] + "." + filt[j][1];
+                        }
+                        let c=0;
+                        checkHierarchy.forEach(function(str) {
+                            if (alreadySeen[str]){
+                                if(!duplicateHierarchy.includes(str)){
+                                    duplicateHierarchy[c] = str;
+                                    c++;
                                 }
-                                rowQuery += "[" + row[0] + "].[" + row[1] + "].[" + filtSplit[p][2] + "]";
-                                toSplice.push(p);
-                                a++;
+                            } else {
+                                alreadySeen[str] = true;
                             }
-                        }                        
-                        if(!filtHierarchy.includes(rows[1])) {
-                            rowQuery += "}*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
+                        });
+
+                        // Fill filterQuery string
+                        filterQuery += " where (";
+                        // Check for duplicates to make a set
+                        if(duplicateHierarchy.length > 0) {
+                            for(let m = 0; m < c; m++) {
+                                if(m > 0) {
+                                    filterQuery += ", ";
+                                }
+                                filterQuery += "{";
+                                let duplCount = 0;
+                                for(let k = 0; k < len; k++) {
+                                    // Create query strings for filter parameters to put in a set
+                                    if (duplicateHierarchy[m].includes(filt[k][0] + "." + filt[k][1])) {
+                                        if(duplCount > 0) {
+                                            filterQuery += ", ";
+                                        }
+                                        filterQuery += "[" + filt[k][0] + "].[" + filt[k][1] + "].[" + filt[k][2] + "]";
+                                        duplCount++;
+                                    }
+                                }
+                                filterQuery += "}";
+                            }
                         }
                         
-                    }
-                    if(filtHierarchy.includes(rows[1])) {
-                        if(!filtHierarchy.includes(rows[0])) {
-                            rowQuery += "[" + row[0] + "].[" + row[1] + "].children*";
-                        }
-                        rowQuery += "{";
-                        let a = 0;                        
-                        for(let r = 0; r < leng; r++) {
-                            if(filtSplit[r][0] == row1[0] && filtSplit[r][1] == row1[1]) {
-                                if(a > 0) {
-                                    rowQuery += ",";
+                        // Create query strings for filter parameters without putting them in a set
+                        for(let i = 0; i < len; i++) {
+                            if (!duplicateHierarchy.includes(filt[i][0] + "." + filt[i][1])) {
+                                if(filterQuery.length > 8) {
+                                    filterQuery += ", ";
                                 }
-                                rowQuery += "[" + row1[0] + "].[" + row1[1] + "].[" + filtSplit[r][2] + "]";
-                                toSplice.push(r);
-                                a++;
+                                filterQuery += "[" + filt[i][0] + "].[" + filt[i][1] + "].[" + filt[i][2] + "]";
                             }
                         }
-                        rowQuery += "} on rows ";
+                        filterQuery += ")";
+
+                        return filterQuery;
                     }
-                    for(let q = toSplice.length -1; q >=0; q--) {
-                        filter.splice(toSplice[q],1);
-                    }
-                    if(!(filtHierarchy.includes(rows[0]) || filtHierarchy.includes(rows[1]))) {
-                        rowQuery = "[" + row[0] + "].[" + row[1] + "].children*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
-                    }                    
-                } else {
-                    this.error("Either 1 or 2 rows must be given");
+                    return filterQuery
                 }
 
-                if(filter.length > 0) {
-                    let checkHierarchy = [];
-                    let alreadySeen = [];
-                    let duplicateHierarchy = [];
-                    let len = filter.length;
-                    let filt = {};
-
-                    // check for returning hierarchies
-                    for(let j = 0; j < len; j++) {
-                        filt[j] = filter[j].split(".");
-                        checkHierarchy[j] = filt[j][0] + "." + filt[j][1];
-                    }
-                    let c=0;
-                    checkHierarchy.forEach(function(str) {
-                        if (alreadySeen[str]){
-                            if(!duplicateHierarchy.includes(str)){
-                                duplicateHierarchy[c] = str;
-                                c++;
-                            }
-                        } else {
-                            alreadySeen[str] = true;
-                        }
-                    });
-
-                    // fill filterQuery string
-                    filterQuery += " where (";
-                    if(duplicateHierarchy.length > 0) {
-                        for(let m = 0; m < c; m++) {
-                            if(m > 0) {
-                                filterQuery += ", ";
-                            }
-                            filterQuery += "{";
-                            let duplCount = 0;
-                            for(let k = 0; k < len; k++) {
-                                if (duplicateHierarchy[m].includes(filt[k][0] + "." + filt[k][1])) {
-                                    if(duplCount > 0) {
-                                        filterQuery += ", ";
-                                    }
-                                    filterQuery += "[" + filt[k][0] + "].[" + filt[k][1] + "].[" + filt[k][2] + "]";
-                                    duplCount++;
-                                }
-                            }
-                            filterQuery += "}";
-                        }
-                    }
-                    
-                    for(let i = 0; i < len; i++) {
-                        if (!duplicateHierarchy.includes(filt[i][0] + "." + filt[i][1])) {
-                            if(filterQuery.length > 8) {
-                                filterQuery += ", ";
-                            }
-                            filterQuery += "[" + filt[i][0] + "].[" + filt[i][1] + "].[" + filt[i][2] + "]";
-                        }
-                    }
-                    filterQuery += ")";
-                }
-
-                query = columnQuery + rowQuery + "from [Model]" + filterQuery;
+                let query = createSelectColumns() + createSelectRows() + "from [Model]" + createWhere();
                 
                 OLAP.execute(this.connection, query).then(result => {
                     this.success(result);
                 }).catch(e => {
-                    const message = e.toString();
-    
-                    // Try and extract the error message
-                    const match = message.match(/ERROR: (.*?)$/);
-                    if (match && typeof match[1] == "string") {
-                        this.error(match[1]);
-                    } else {
-                        this.error((e.stack || e).toString(), query);
-                    }
+                    this.error((e.stack || e).toString(), query);
                 });
             } else {
                 this.error("This is not a viable URL", null);
