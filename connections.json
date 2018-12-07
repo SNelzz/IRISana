@@ -1,0 +1,6 @@
+{
+  "olap": {
+    "type": "olap",
+    "connectionString": "Provider=MSOLAP.7;Password=Ch3ssM@ster;Persist Security Info=True;User ID=DEVMIHAI\\SSASDev;Initial Catalog=Iris-Ana-Ontwikkel;Data Source=10.200.134.2;Update Isolation Level=2"
+  }
+}

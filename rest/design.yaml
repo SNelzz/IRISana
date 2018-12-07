@@ -1,0 +1,161 @@
+openapi: 3.0.0
+info:
+  version: "3.0.0"
+  title: 'NetJS IRIS REST API'
+  description: 'OpenAPI ontwerp voode IRIS REST API'
+  contact:
+    name: Niels Daalhuisen
+    email: nielsdaalhuisen@gmail.com
+  
+servers:
+  - url: http://localhost/irisana
+    description: IRIS analytics REST API
+    
+paths:
+  /facts:
+    get:
+      description: obtain the available facts from the cube
+      responses:
+        200:
+          description: Successful pull of facts from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /facts/{fact}/measures:
+    get:
+      description: obtain the available measures of the chosen fact from the cube
+      parameters: 
+      - name: fact
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of measures from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+              
+  /facts/{fact}/dimensions:
+    get:
+      description: obtain the available dimensions of the chosen fact from the cube
+      parameters: 
+      - name: fact
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of dimensions from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /facts/{fact}/dimensions/{dimension}/hierarchies:
+    get:
+      description: obtain the available hierarchies of the chosen dimension from the cube
+      parameters: 
+      - name: fact
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dimension
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of hierarchies from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /facts/{fact}/dimensions/{dimension}/hierarchies/{hierarchy}/members:
+    get:
+      description: obtain the available members of the chosen hierarchy from the cube
+      parameters: 
+      - name: fact
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dimension
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: hierarchy
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of members from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /graph:
+    get:
+      description: obtain the available hierarchies of the chosen dimension from the cube
+      parameters: 
+      - name: fact
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: rows
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: columns
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: filter
+        in: query
+        required: false
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of members from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfResults'
+                    
+components:
+  schemas:
+  
+    ListOfNames:
+      description: Array of facts/measures/dimensions from the cube
+      type: array
+      items:
+        properties:
+          name:
+            type: string
+            example: PageView
+            
+    ListOfResults:
+      description: Array of the results from the query
+      type: array
+      items: {}
