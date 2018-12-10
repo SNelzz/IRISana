@@ -134,6 +134,11 @@ paths:
         required: false
         schema:
           type: string
+      - name: nonEmpty
+        in: query
+        required: false
+        schema:
+          type: boolean
         
       responses:
         200:

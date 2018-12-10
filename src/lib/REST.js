@@ -63,7 +63,7 @@ class REST {
             return this.error("The API has not loaded yet");
         }
 
-        // Routing parameters
+        // Path parameters
         let fact = null;
         let dimension = null;
         let hierarchy = null;
@@ -140,6 +140,8 @@ class REST {
                 const fact = params["fact"].replace(/-/g, " ");
                 const columns = params["columns"].replace(/-/g, " ").split(",");
                 const rows = params["rows"].replace(/-/g, " ").split(",");
+                let nonEmpty = false;
+                nonEmpty = params["nonEmpty"];
                 let filter = [];               
                 if(params["filter"] != null) {
                    filter = params["filter"].replace(/-/g, " ").split(",");
@@ -170,11 +172,15 @@ class REST {
                         filterHierarchy[n] = filt[n][0] + "." + filt[n][1];
                     }
 
+                    if(nonEmpty) {
+                        rowQuery += "NON EMPTY "
+                    }
+
                     if(rows.length == 1) {
                         const row = rows[0].split(".");
                         // Check if row needs to be filtered
                         if(filterHierarchy.includes(rows[0])) {
-                            rowQuery = "{";
+                            rowQuery += "{";
                             let a = 0;
                             let toSplice = [];
                             for(let p = 0; p < len; p++) {
@@ -194,7 +200,7 @@ class REST {
                             }
                             rowQuery += "} on rows ";
                         } else {
-                            rowQuery = "{[" + row[0] + "].[" + row[1] + "].children} on rows ";
+                            rowQuery += "{[" + row[0] + "].[" + row[1] + "].children} on rows ";
                         }                    
                     } else if(rows.length == 2) {
                         const row = rows[0].split(".");
@@ -249,7 +255,7 @@ class REST {
                         }
                         // Check if either row needs to be filtered. If not then create the row query string without sets.
                         if(!(filterHierarchy.includes(rows[0]) || filterHierarchy.includes(rows[1]))) {
-                            rowQuery = "[" + row[0] + "].[" + row[1] + "].children*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
+                            rowQuery += "[" + row[0] + "].[" + row[1] + "].children*[" + row1[0] + "].[" + row1[1] + "].children on rows ";
                         }                    
                     } else {
                         this.error("Either 1 or 2 rows must be given");
