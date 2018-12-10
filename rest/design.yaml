@@ -109,6 +109,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListOfNames'
+      
+  /dimensions:
+    get:
+      description: obtain the available dimensions from the cube
+      responses:
+        200:
+          description: Successful pull of dimensions from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /dimensions/{dimension}/hierarchies:
+    get:
+      description: obtain the available hierarchies of the chosen dimension from the cube
+      parameters: 
+      - name: dimension
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of hierarchies from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
+                
+  /dimensions/{dimension}/hierarchies/{hierarchy}/members:
+    get:
+      description: obtain the available members of the chosen hierarchy from the cube
+      parameters: 
+      - name: dimension
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: hierarchy
+        in: path
+        required: true
+        schema:
+          type: string
+        
+      responses:
+        200:
+          description: Succesful pull of members from the cube
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfNames'
                 
   /graph:
     get:

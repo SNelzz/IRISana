@@ -78,6 +78,13 @@ class REST {
                     url = url.replace(urlPath[6].toString().toLowerCase(), "{hierarchy}");
                 }
             }
+        } else if(urlPath[1] == "dimensions" && urlPath.length > 2 ) {
+            dimension = urlPath[2].replace(/-/g, " ");
+            url = url.replace(urlPath[2].toString().toLowerCase(), "{dimension}");
+            if(urlPath[3] == "hierarchies" && urlPath.length > 4) {
+                hierarchy = urlPath[4].replace(/-/g, " ");
+                url = url.replace(urlPath[4].toString().toLowerCase(), "{hierarchy}");
+            }
         }
 
         // Check if the route exists in the API
@@ -338,10 +345,32 @@ class REST {
                     this.error((e.stack || e).toString(), query);
                 });
             } else {
-                this.error("This is not a viable URL", null);
+                let query;
+    
+                if(url == "/dimensions") {
+                    OLAP.getDimensions(this.connection).then(result => {
+                        this.success(result);
+                    }).catch(e => {
+                        this.error((e.stack || e).toString(), query);
+                    });
+                } else if(url == "/dimensions/{dimension}/hierarchies") {
+                    OLAP.getHierarchiesByDimension(this.connection, dimension).then(result => {
+                        this.success(result);
+                    }).catch(e => {
+                    this.error((e.stack || e).toString(), query);
+                    });
+                } else if(url == "/dimensions/{dimension}/hierarchies/{hierarchy}/members") {
+                    OLAP.getMembers(this.connection, dimension, hierarchy).then(result => {
+                        this.success(result);
+                    }).catch(e => {
+                        this.error((e.stack || e).toString(), query);
+                    });
+                } else {
+                    this.error("This is not a viable URL", query);
+                }
             }
 
-        } else {
+        } else {    
             this.error("This is not a viable URL", null);
         }
     }
